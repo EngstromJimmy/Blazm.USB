@@ -1,4 +1,3 @@
-using Blazm.Hid.Server.Data;
 using Blazm.Usb;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -23,7 +22,6 @@ namespace Blazm.Usb.Server
         {
             services.AddRazorPages();
             services.AddServerSideBlazor();
-            services.AddSingleton<WeatherForecastService>();
             services.AddScoped<UsbNavigator>();
         }
 

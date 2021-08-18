@@ -17,11 +17,10 @@ export async function requestDevice(filter)
     console.log(filter);
 
 
-    var devices = await navigator.usb.requestDevice(objfilter);
-    console.log(devices);
-    var device = devices[0];
+    var device = await navigator.usb.requestDevice(objfilter);
+    console.log(device);
     PairedUSBDevices.push(device);
-    
+
     return returnUsbDevice(device);
 }
 
@@ -52,13 +51,14 @@ export async function getDevices() {
 export async function openDevice(deviceId,devicehandler) {
     var device = getDevice(deviceId);
 
-    //Add NotificationHandler
-    device.NotificationHandler = devicehandler;
-    device.oninputreport = async (e) => {
-        console.log(e.data)
-        await e.srcElement.NotificationHandler.invokeMethodAsync('HandleOnInputReport', e.reportId, new Uint8Array(e.data.buffer));
-    };
-
+    ////Add NotificationHandler
+    //device.NotificationHandler = devicehandler;
+    //device.oninputreport = async (e) => {
+    //    console.log(e.data)
+    //    await e.srcElement.NotificationHandler.invokeMethodAsync('HandleOnInputReport', e.reportId, new Uint8Array(e.data.buffer));
+    //};
+    console.log("Go device");
+    console.log(device);
     await device.open();
     return device.opened;
 }
@@ -68,7 +68,7 @@ export async function openDevice(deviceId,devicehandler) {
 export async function selectConfiguration(deviceId, configuration) {
     var device = getDevice(deviceId);
 
-    await device.configuration(configuration);
+    await device.selectConfiguration(configuration);
 
 }
 
@@ -80,30 +80,52 @@ export async function claimInterface(deviceId, interfaceId) {
 
 }
 
-export async function controlTransferOut(deviceId, requestType, recipient, request, value, index) {
+
+export async function reset(deviceId, interfaceId) {
     var device = getDevice(deviceId);
 
+    await device.reset();
+
+}
+export async function controlTransferOut(deviceId, requestType, recipient, request, value, index,data) {
+    var device = getDevice(deviceId);
+    //await device.controlTransferOut({
+    //    requestType: requestType,
+    //    recipient: recipient,
+    //    request: request,
+    //    value: value,
+    //    index: index
+    //});
+
     await device.controlTransferOut({
-        requestType: requestType,
-        recipient: recipient,
-        request: request,
-        value: value,
-        index: index
+        requestType: 'vendor',
+        recipient: 'endpoint',
+        request: 0,
+        value: 0,
+        index: 2
     });
 }
 
-
-export async function transferIn(deviceId, requestType, recipient, request, value, index) {
-    
+export async function transferIn(deviceId,endpointNumber, length)
+{
     var device = getDevice(deviceId);
-    await device.controlTransferOut({
-        requestType: requestType,
-        recipient: recipient,
-        request: request,
-        value: value,
-        index: index
-    });
+    var value = await device.transferIn(endpointNumber, length);
+    var bytes = Array.from(new Uint8Array(value.data.buffer));
+
+    //var returnvalue = { status: value.status.capitalize(), data: b2 };
+    return bytes;
 }
+
+export async function transferOut(deviceId,endpointNumber, data)
+{
+    var device = getDevice(deviceId);
+    var value = await device.transferOut(endpointNumber, data);
+    return { bytesWritten: value.bytesWritten, status: value.status };
+}
+//Promise < USBIsochronousInTransferResult > isochronousTransferIn(octet endpointNumber, sequence < unsigned long > packetLengths);
+//Promise < USBIsochronousOutTransferResult > isochronousTransferOut(octet endpointNumber, BufferSource data, sequence < unsigned long > packetLengths);
+
+
 
 function getDevice(deviceId) {
     var paireddevices = PairedUSBDevices.filter(function (device) {
@@ -111,5 +133,9 @@ function getDevice(deviceId) {
     });
 
     var device = paireddevices[0];
-    return paireddevices;
+    return device;
+}
+
+String.prototype.capitalize = function () {
+    return this.charAt(0).toUpperCase() + this.slice(1);
 }

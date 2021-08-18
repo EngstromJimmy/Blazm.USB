@@ -1,0 +1,65 @@
+﻿@page "/Tellstick"
+@using Blazm.Usb.Server.Protocols
+@inject UsbNavigator navigator;
+
+<button @onclick="ListDevicesAsync"> List Devices </button>
+<button @onclick="On"> On </button>
+<button @onclick="Off"> Off </button>
+<button @onclick="ReadData"> Read </button>
+
+<br/>
+<br/>
+@foreach(var d in devices)
+{
+    @d.ProductName @d.Opened <button @onclick="@(async ()=>{await OpenDevice(d);})">Connect</button> <br/>
+}
+
+@code{
+    private List<UsbDeviceFilter> _filters=new();
+
+    UsbDevice myDevice;
+    List<UsbDevice> devices=new();
+    public async Task ListDevicesAsync()
+    {
+        devices=await navigator.GetDevicesAsync();
+    }
+
+
+    public async Task OpenDevice(UsbDevice device)
+    {
+        myDevice = device;
+        await device.OpenAsync();
+        await device.SelectConfigurationAsync(1);
+        await device.ClaimInterfaceAsync(0);
+        USBControlTransferParameters p = new();
+        p.Recipient = USBRecipient.Endpoint;
+        p.Request = 0;
+        p.RequestType = USBRequestType.Vendor;
+        p.Index=0;
+        p.Value=2;
+      
+        await device.ControlTransferOut(p, new byte[0]);
+
+        //await device.SelectAlternateInterfaceAsync(0);
+    }
+
+    RisingSunProtocol protocol = new RisingSunProtocol();
+    public async Task On()
+    {
+        var command = protocol.GetString("2,4", MethodEnum.TURNON);
+        command += "\0\0";
+        var bytes = command.Select(c => (byte)(c & 0xff)).ToArray();
+        var value=await myDevice.TransferOut(2, bytes);
+    }
+
+    public async Task Off()
+    {
+        var s = protocol.GetString("1,2", TypeEnum.CodeSwitch, MethodEnum.TURNOFF, '\0');
+    }
+
+    public async Task ReadData()
+    {
+        var value = await myDevice.TransferIn(1, 64);
+        
+    }
+}

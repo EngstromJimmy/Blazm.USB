@@ -1,0 +1,20 @@
+﻿@page "/"
+@page "/RequestDevice"
+@inject UsbNavigator navigator;
+
+<button @onclick="Connect"> Request Devices </button>
+
+@code{
+    private List<UsbDeviceFilter> _filters=new();
+    UsbDevice myDevice;
+    
+    
+    public async Task Connect()
+    {
+        //_filters.Add(new HidDeviceFilter() {vendorId = 10171 }); //Add BusyLight
+
+        var filter = new UsbDeviceRequestOptions() { filters = _filters.ToArray() };
+        myDevice=await navigator.RequestDeviceAsync(filter);
+    }
+
+}
